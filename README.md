@@ -13,7 +13,7 @@
 
 - [Why coin-mcp](#why-coin-mcp)
 - [What it can answer](#what-it-can-answer)
-- [Quickstart](#quickstart)
+- [Installation](#installation)
 - [Architecture](#architecture)
 - [Tool catalog (49)](#tool-catalog-49)
 - [Prompt templates (8)](#prompt-templates-8)
@@ -61,33 +61,95 @@ A non-exhaustive sample of questions a connected LLM can resolve in 1–3 tool c
 - "Is everything healthy? I'm seeing weird data." → `health_check`
 - "Which public companies hold BTC?" → `get_companies_holdings`
 
-## Quickstart
+## Installation
+
+### Prerequisites
+
+- **Python 3.10+** (`python3 --version` to check)
+- **Git**
+- One of:
+  - [`uv`](https://docs.astral.sh/uv/) (recommended — handles Python toolchain, venv, lockfile in one tool)
+  - `pip` + a virtualenv
+
+`uv` install (one line, all platforms):
 
 ```bash
-# Clone and install
-git clone https://github.com/ymylive/coin-mcp.git
-cd coin-mcp
-uv sync                          # uv recommended; pip works too
-
-# Run via stdio (the MCP standard for local clients like Claude Desktop)
-uv run coin-mcp
-
-# Or HTTP for hosted / remote use
-uv run coin-mcp --transport streamable-http --port 8000
+curl -LsSf https://astral.sh/uv/install.sh | sh        # macOS / Linux
+# powershell -c "irm https://astral.sh/uv/install.ps1 | iex"   # Windows PowerShell
 ```
 
-A 30-second smoke test:
+### Option 1 — uv (recommended)
+
+```bash
+git clone https://github.com/ymylive/coin-mcp.git
+cd coin-mcp
+uv sync                                # creates .venv, installs from uv.lock
+uv run coin-mcp                        # starts the server on stdio
+```
+
+`uv sync` reads `pyproject.toml` + `uv.lock` and installs everything (`mcp`, `httpx`, `ccxt`) into a project-local `.venv/`. No system pollution.
+
+### Option 2 — pip + venv
+
+```bash
+git clone https://github.com/ymylive/coin-mcp.git
+cd coin-mcp
+python3 -m venv .venv
+source .venv/bin/activate              # Windows: .venv\Scripts\activate
+pip install -e .                       # editable install, deps resolved fresh
+coin-mcp                               # starts the server on stdio
+```
+
+### Option 3 — install directly from GitHub (no clone)
+
+```bash
+uv tool install git+https://github.com/ymylive/coin-mcp.git
+coin-mcp                               # available on PATH
+```
+
+This puts the `coin-mcp` console script on your PATH globally without cluttering any project directory. Best for "I just want to point Claude Desktop at it."
+
+### Optional: install dev/test extras
+
+If you want to run the test suite or hack on the code:
+
+```bash
+uv sync --extra dev                    # adds pytest + pytest-asyncio
+uv run pytest                          # 29 tests, all should pass
+```
+
+### Verify the installation
+
+A 5-second sanity check that all tools registered correctly:
 
 ```bash
 uv run python -c "
 import asyncio, server
 async def main():
     tools = await server.mcp.list_tools()
-    print(f'{len(tools)} tools registered')
+    prompts = await server.mcp.list_prompts()
+    resources = await server.mcp.list_resources()
+    print(f'{len(tools)} tools / {len(prompts)} prompts / {len(resources)} resources')
 asyncio.run(main())
 "
-# 49 tools registered
+# Expected: 49 tools / 8 prompts / 3 resources
 ```
+
+CLI help is also one command away:
+
+```bash
+uv run coin-mcp --help
+```
+
+### Common pitfalls
+
+| Symptom | Likely cause / fix |
+|---|---|
+| `python3: command not found` | Python 3.10+ not installed. Install via [python.org](https://www.python.org/downloads/) or `uv python install 3.12`. |
+| `ModuleNotFoundError: mcp` | You're not running inside the project venv. Use `uv run …` or activate `.venv/bin/activate`. |
+| `Service unavailable from a restricted location` (Binance) | Geographic block — not a bug. Use OKX, Kraken, Bybit, etc. instead via the `exchange_id` param. |
+| `HTTP 429` from CoinGecko | Rate-limited. The cache layer mitigates this; consider setting `COINGECKO_API_KEY` for higher limits. |
+| `uv: command not found` | Install uv first (see Prerequisites) or use the pip path (Option 2). |
 
 ## Architecture
 
