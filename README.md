@@ -1,5 +1,7 @@
 # coin-mcp
 
+**English** · [中文](./README.zh.md)
+
 > A comprehensive cryptocurrency market-data MCP server. Six data sources, 49 tools, 8 prompt templates, 3 resources — wired together so an LLM can answer almost any "what's the market doing?" question with a single call.
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
